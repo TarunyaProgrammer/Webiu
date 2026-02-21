@@ -1,9 +1,9 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, inject, DestroyRef } from '@angular/core';
 
 import { HttpClientModule, HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { environment } from '../../../environments/environment';
-
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-projects-card',
@@ -30,7 +30,7 @@ export class ProjectsCardComponent implements OnInit {
   initialized = false;
 
   private http = inject(HttpClient);
-
+  private destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
     if (!this.initialized) {
@@ -40,16 +40,19 @@ export class ProjectsCardComponent implements OnInit {
 
   fetchIssuesAndPRs(): void {
     const apiUrl = `${environment.serverUrl}/api/issues/issuesAndPr?org=${this.org}&repo=${this.repo}`;
-    this.http.get<{ issues: number; pullRequests: number }>(apiUrl).subscribe(
-      (data) => {
-        this.issueCount = data.issues;
-        this.pullRequestCount = data.pullRequests;
-        this.initialized = true;
-      },
-      (error) => {
-        console.error('Failed to fetch issues and PRs:', error);
-      }
-    );
+    this.http
+      .get<{ issues: number; pullRequests: number }>(apiUrl)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(
+        (data) => {
+          this.issueCount = data.issues;
+          this.pullRequestCount = data.pullRequests;
+          this.initialized = true;
+        },
+        (error) => {
+          console.error('Failed to fetch issues and PRs:', error);
+        },
+      );
   }
 
   public detailsVisible = false;

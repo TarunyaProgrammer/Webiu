@@ -1,6 +1,13 @@
-import { Component, OnInit, HostListener, inject } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  HostListener,
+  inject,
+  DestroyRef,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavbarComponent } from '../../components/navbar/navbar.component';
 import { Contributor } from '../../common/data/contributor';
 
@@ -58,20 +65,24 @@ export class ContributorsComponent implements OnInit {
   private http = inject(HttpClient);
   private commonUtil = inject(CommmonUtilService);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
 
   ngOnInit() {
     this.getProfiles();
-    this.searchText.valueChanges.subscribe(() => {
-      this.currentPage = 1;
-      this.filterProfiles();
-    });
+    this.searchText.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.currentPage = 1;
+        this.filterProfiles();
+      });
   }
 
   getProfiles() {
     this.http
-      .get<
-        Contributor[]
-      >(`${environment.serverUrl}/api/contributor/contributors`)
+      .get<Contributor[]>(
+        `${environment.serverUrl}/api/contributor/contributors`,
+      )
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
           this.contributors = res || [];
@@ -98,6 +109,7 @@ export class ContributorsComponent implements OnInit {
         `${environment.serverUrl}/api/user/batch-social`,
         { usernames },
       )
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data) => {
           this.contributors.forEach((contributor) => {

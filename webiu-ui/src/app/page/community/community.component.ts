@@ -1,10 +1,17 @@
-import { Component, HostListener, inject, OnInit } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  inject,
+  OnInit,
+  DestroyRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavbarComponent } from '../../components/navbar/navbar.component';
 import { Media, socialMedia } from '../../common/data/media';
 import { Contributor } from '../../common/data/contributor';
 import { CommmonUtilService } from '../../common/service/commmon-util.service';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { environment } from '../../../environments/environment';
 import { ProfileCardComponent } from '../../components/profile-card/profile-card.component';
 import { RouterModule } from '@angular/router';
@@ -25,6 +32,7 @@ import { RouterModule } from '@angular/router';
 export class CommunityComponent implements OnInit {
   private commonUtil = inject(CommmonUtilService);
   private http = inject(HttpClient);
+  private destroyRef = inject(DestroyRef);
   icons: Media[] = socialMedia;
   users: Contributor[] = [];
   isLoading = true;
@@ -36,9 +44,10 @@ export class CommunityComponent implements OnInit {
 
   getTopContributors() {
     this.http
-      .get<
-        Contributor[]
-      >(`${environment.serverUrl}/api/contributor/contributors`)
+      .get<Contributor[]>(
+        `${environment.serverUrl}/api/contributor/contributors`,
+      )
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
           // Sort by contributions in descending order, take top 9
@@ -71,17 +80,20 @@ export class CommunityComponent implements OnInit {
     };
 
     this.users.forEach((profile) => {
-      this.http.get(`https://api.github.com/users/${profile.login}`).subscribe({
-        next: (data: any) => {
-          profile.followers = data.followers;
-          profile.following = data.following;
-          checkCompletion();
-        },
-        error: () => {
-          console.error(`Error fetching followers for ${profile.login}`);
-          checkCompletion();
-        },
-      });
+      this.http
+        .get(`https://api.github.com/users/${profile.login}`)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (data: any) => {
+            profile.followers = data.followers;
+            profile.following = data.following;
+            checkCompletion();
+          },
+          error: () => {
+            console.error(`Error fetching followers for ${profile.login}`);
+            checkCompletion();
+          },
+        });
     });
   }
 

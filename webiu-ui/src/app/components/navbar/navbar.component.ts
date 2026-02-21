@@ -1,8 +1,15 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  OnInit,
+  inject,
+  DestroyRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { ThemeService } from '../../services/theme.service';
 import { filter } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -15,6 +22,7 @@ import { environment } from '../../../environments/environment';
 export class NavbarComponent implements OnInit {
   private router = inject(Router);
   private themeService = inject(ThemeService);
+  private destroyRef = inject(DestroyRef);
 
   isMenuOpen = false;
   isSunVisible = true;
@@ -30,6 +38,7 @@ export class NavbarComponent implements OnInit {
         filter(
           (event): event is NavigationEnd => event instanceof NavigationEnd,
         ),
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((event: NavigationEnd) => {
         this.currentRoute = event.url;

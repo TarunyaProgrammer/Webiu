@@ -1,4 +1,10 @@
-import { Component, OnInit, HostListener, inject } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  HostListener,
+  inject,
+  DestroyRef,
+} from '@angular/core';
 
 import { HttpClientModule } from '@angular/common/http';
 import { NavbarComponent } from '../../components/navbar/navbar.component';
@@ -8,6 +14,7 @@ import { Project } from './project.model';
 import { FormsModule } from '@angular/forms';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ProjectCacheService } from 'src/app/services/project-cache.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-projects',
@@ -35,26 +42,30 @@ export class ProjectsComponent implements OnInit {
   totalPages = 1;
 
   private projectCacheService = inject(ProjectCacheService);
+  private destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
     this.fetchProjects();
   }
 
   fetchProjects(): void {
-    this.projectCacheService.getProjects().subscribe({
-      next: (response) => {
-        this.projectsData = this.sortProjects(response.repositories);
-        this.filteredProjects = [...this.projectsData];
-        this.updateDisplayProjects();
-        this.isLoading = false;
-      },
-      error: () => {
-        this.projectsData = this.sortProjects(projectsData.repositories);
-        this.filteredProjects = [...this.projectsData];
-        this.updateDisplayProjects();
-        this.isLoading = false;
-      },
-    });
+    this.projectCacheService
+      .getProjects()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.projectsData = this.sortProjects(response.repositories);
+          this.filteredProjects = [...this.projectsData];
+          this.updateDisplayProjects();
+          this.isLoading = false;
+        },
+        error: () => {
+          this.projectsData = this.sortProjects(projectsData.repositories);
+          this.filteredProjects = [...this.projectsData];
+          this.updateDisplayProjects();
+          this.isLoading = false;
+        },
+      });
   }
 
   sortProjects(projects: Project[]): Project[] {

@@ -1,7 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, DestroyRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { formatDistanceToNow } from 'date-fns';
@@ -11,7 +12,12 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 @Component({
   selector: 'app-contributor-search',
   standalone: true,
-  imports: [FormsModule, CommonModule, LoadingSpinnerComponent, HttpClientModule],
+  imports: [
+    FormsModule,
+    CommonModule,
+    LoadingSpinnerComponent,
+    HttpClientModule,
+  ],
   templateUrl: './contributor-search.component.html',
   styleUrls: ['./contributor-search.component.scss'],
 })
@@ -44,14 +50,17 @@ export class ContributorSearchComponent implements OnInit {
 
   private route = inject(ActivatedRoute);
   private http = inject(HttpClient);
+  private destroyRef = inject(DestroyRef);
 
   ngOnInit() {
-    this.route.queryParams.subscribe((params) => {
-      if (params['username']) {
-        this.username = params['username'];
-        this.onSearch();
-      }
-    });
+    this.route.queryParams
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        if (params['username']) {
+          this.username = params['username'];
+          this.onSearch();
+        }
+      });
   }
 
   async onSearch() {
@@ -67,8 +76,12 @@ export class ContributorSearchComponent implements OnInit {
     try {
       // Fetch stats (issues + PRs) and user profile in parallel
       const [statsResponse, userProfileResponse] = await Promise.all([
-        firstValueFrom(this.http.get<any>(`${this.apiUrl}/stats/${this.username}`)),
-        firstValueFrom(this.http.get<any>(`${this.userUrl}/profile/${this.username}`)),
+        firstValueFrom(
+          this.http.get<any>(`${this.apiUrl}/stats/${this.username}`),
+        ),
+        firstValueFrom(
+          this.http.get<any>(`${this.userUrl}/profile/${this.username}`),
+        ),
       ]);
 
       this.issues = statsResponse.issues;
@@ -125,11 +138,16 @@ export class ContributorSearchComponent implements OnInit {
   applyFilters() {
     // Filter by repository
     let filteredIssues = this.selectedRepo
-      ? this.issues.filter((issue) => issue.repository_url.split('/').pop() === this.selectedRepo)
+      ? this.issues.filter(
+          (issue) =>
+            issue.repository_url.split('/').pop() === this.selectedRepo,
+        )
       : [...this.issues];
 
     let filteredPRs = this.selectedRepo
-      ? this.pullRequests.filter((pr) => pr.repository_url.split('/').pop() === this.selectedRepo)
+      ? this.pullRequests.filter(
+          (pr) => pr.repository_url.split('/').pop() === this.selectedRepo,
+        )
       : [...this.pullRequests];
 
     // Filter by status
@@ -157,17 +175,33 @@ export class ContributorSearchComponent implements OnInit {
 
     switch (sortBy) {
       case 'updated-desc':
-        return sorted.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+        return sorted.sort(
+          (a, b) =>
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+        );
       case 'updated-asc':
-        return sorted.sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
+        return sorted.sort(
+          (a, b) =>
+            new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime(),
+        );
       case 'created-desc':
-        return sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return sorted.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
       case 'created-asc':
-        return sorted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        return sorted.sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        );
       case 'title-asc':
-        return sorted.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
+        return sorted.sort((a, b) =>
+          a.title.toLowerCase().localeCompare(b.title.toLowerCase()),
+        );
       case 'title-desc':
-        return sorted.sort((a, b) => b.title.toLowerCase().localeCompare(a.title.toLowerCase()));
+        return sorted.sort((a, b) =>
+          b.title.toLowerCase().localeCompare(a.title.toLowerCase()),
+        );
       default:
         return sorted;
     }
@@ -226,6 +260,9 @@ export class ContributorSearchComponent implements OnInit {
   get memberSince(): string {
     if (!this.userProfile?.created_at) return '';
     const date = new Date(this.userProfile.created_at);
-    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      year: 'numeric',
+    });
   }
 }
