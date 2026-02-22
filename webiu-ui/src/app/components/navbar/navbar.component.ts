@@ -1,11 +1,5 @@
-import {
-  Component,
-  HostListener,
-  OnInit,
-  inject,
-  DestroyRef,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component,HostListener,OnInit,inject,DestroyRef,PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { ThemeService } from '../../services/theme.service';
 import { filter } from 'rxjs/operators';
@@ -23,6 +17,7 @@ export class NavbarComponent implements OnInit {
   private router = inject(Router);
   private themeService = inject(ThemeService);
   private destroyRef = inject(DestroyRef);
+  private platformId = inject(PLATFORM_ID);
 
   isMenuOpen = false;
   isSunVisible = true;
@@ -45,18 +40,20 @@ export class NavbarComponent implements OnInit {
         this.isMenuOpen = false;
       });
 
-    const queryParams = new URLSearchParams(window.location.search);
-    const user = queryParams.get('user');
-    if (user) {
-      try {
-        this.user = JSON.parse(decodeURIComponent(user));
-        this.isLoggedIn = true;
-      } catch (e) {
-        console.warn('Failed to parse user query param:', e);
-        this.user = null;
-        this.isLoggedIn = false;
+    if (isPlatformBrowser(this.platformId)) {
+      const queryParams = new URLSearchParams(window.location.search);
+      const user = queryParams.get('user');
+      if (user) {
+        try {
+          this.user = JSON.parse(decodeURIComponent(user));
+          this.isLoggedIn = true;
+        } catch (e) {
+          console.warn('Failed to parse user query param:', e);
+          this.user = null;
+          this.isLoggedIn = false;
+        }
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
-      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }
 
@@ -91,11 +88,15 @@ export class NavbarComponent implements OnInit {
   }
 
   loginWithGoogle(): void {
-    window.location.href = `${environment.serverUrl}/auth/google`;
+    if (isPlatformBrowser(this.platformId)) {
+      window.location.href = `${environment.serverUrl}/auth/google`;
+    }
   }
 
   loginWithGitHub(): void {
-    window.location.href = `${environment.serverUrl}/auth/github`;
+    if (isPlatformBrowser(this.platformId)) {
+      window.location.href = `${environment.serverUrl}/auth/github`;
+    }
   }
 
   preventReload(event: Event): void {
@@ -108,6 +109,8 @@ export class NavbarComponent implements OnInit {
 
   @HostListener('document:click', ['$event'])
   onClickOutside(event: MouseEvent): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
     const loginOptionsElement = document.querySelector('.login-options');
     const loginButton = document.querySelector('.Login_Logout');
     const navbarMenu = document.querySelector('#navbarMenu');

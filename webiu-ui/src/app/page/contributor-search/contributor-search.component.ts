@@ -1,10 +1,10 @@
-import { Component, OnInit, inject, DestroyRef } from '@angular/core';
+import { Component, OnInit, inject, PLATFORM_ID, DestroyRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { formatDistanceToNow } from 'date-fns';
 import { environment } from '../../../environments/environment';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -22,6 +22,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
   styleUrls: ['./contributor-search.component.scss'],
 })
 export class ContributorSearchComponent implements OnInit {
+  private platformId = inject(PLATFORM_ID);
   username = '';
   issues: any[] = [];
   pullRequests: any[] = [];
@@ -226,7 +227,7 @@ export class ContributorSearchComponent implements OnInit {
   }
 
   openGitHubProfile(url: string) {
-    if (url) {
+    if (url && isPlatformBrowser(this.platformId)) {
       window.open(url, '_blank');
     }
   }

@@ -1,10 +1,6 @@
-import {
-  Component,
-  OnInit,
-  HostListener,
-  inject,
-  DestroyRef,
-} from '@angular/core';
+import { Component, OnInit, HostListener, inject, PLATFORM_ID, DestroyRef } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Title, Meta } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -47,6 +43,7 @@ export class ContributorsComponent implements OnInit {
   allRepos: string[] = [];
   isLoading = true;
   showButton = false;
+  private platformId = inject(PLATFORM_ID);
   contributors: Contributor[] = [];
 
   contributionRanges: ContributionRange[] = [
@@ -66,8 +63,15 @@ export class ContributorsComponent implements OnInit {
   private commonUtil = inject(CommmonUtilService);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
+  private titleService = inject(Title);
+  private metaService = inject(Meta);
 
   ngOnInit() {
+    this.titleService.setTitle('Contributors | Webiu 2.0');
+    this.metaService.updateTag({ name: 'description', content: 'Meet the contributors powering C2SI and SCoRe Lab projects.' });
+    this.metaService.updateTag({ property: 'og:title', content: 'Contributors | Webiu 2.0' });
+    this.metaService.updateTag({ property: 'og:description', content: 'Meet the contributors powering C2SI and SCoRe Lab projects.' });
+
     this.getProfiles();
     this.searchText.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -284,10 +288,14 @@ export class ContributorsComponent implements OnInit {
 
   @HostListener('window:scroll')
   onWindowScroll() {
-    this.showButton = window.scrollY > 100;
+    if (isPlatformBrowser(this.platformId)) {
+      this.showButton = window.scrollY > 100;
+    }
   }
 
   scrollToTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (isPlatformBrowser(this.platformId)) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 }
